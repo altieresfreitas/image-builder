@@ -1,4 +1,4 @@
-ARG OS_VERSION=22.04
+ARG OS_VERSION=20.04
 FROM ghcr.io/cr-images/firecracker-kernel:5.10.77 AS builder
 
 
