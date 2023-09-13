@@ -1,10 +1,16 @@
-ARG OS_VERSION=20.04
+ARG OS_VERSION=22.04
+FROM ghcr.io/cr-images/firecracker-kernel:5.10.77 AS builder
+
+
+
 FROM ubuntu:${OS_VERSION}
 
+
 ARG ARCH="amd64"
-ARG CONTAINERD_VERSION=1.5.9
+ARG CONTAINERD_VERSION=1.7.5
 # Kubernetes version will be used to keep the kubeadm, kubelet, and kubectl version consistent
-ARG KUBERNETES_VERSION=1.21.8
+ARG KUBERNETES_VERSION=1.27.5
+COPY --from=builder /lib/modules /lib/modules
 
 RUN apt-get update && apt-get install -y \
         kmod \
@@ -57,23 +63,32 @@ RUN tar --no-overwrite-dir -C / -xzf cri-containerd-cni-${CONTAINERD_VERSION}-li
 
 ### Add apt repos
 # Kubeadm, Kubelet, and Kubectl
-RUN curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-RUN echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+RUN mkdir -p /etc/apt/keyrings/;  curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.27/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+RUN echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.27/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
 
 RUN apt-get update && apt-get install -y \
-        kubeadm=${KUBERNETES_VERSION}-00 \
-        kubelet=${KUBERNETES_VERSION}-00 \
-        kubectl=${KUBERNETES_VERSION}-00 && \
+        kubeadm=${KUBERNETES_VERSION}-1.1 \
+        kubelet=${KUBERNETES_VERSION}-1.1 \
+        kubectl=${KUBERNETES_VERSION}-1.1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     apt-mark hold kubelet kubeadm kubectl
 
-RUN mkdir -p /etc/containerd && containerd config default > /etc/containerd/config.toml
+RUN mkdir -p /etc/containerd
 RUN rm /etc/cni/net.d/10-containerd-net.conflist
+COPY containerd-config.toml /etc/containerd/config.toml
 RUN systemctl enable containerd
 
-RUN echo '[Service] \n\
+RUN mkdir /etc/systemd/system/kubelet.service.d ; echo '[Service] \n\
 Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --runtime-request-timeout=15m --container-runtime-endpoint=unix:///run/containerd/containerd.sock"' \
     >> /etc/systemd/system/kubelet.service.d/0-containerd.conf
 
 RUN systemctl enable kubelet
+
+
+
+
+
+

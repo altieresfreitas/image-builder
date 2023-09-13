@@ -1,17 +1,18 @@
-DOCKER := docker
+DOCKER := podman
 BUILD_DATE:=$(shell date --rfc-3339=seconds)
 GIT_SHA:=$(shell git rev-parse HEAD)
 
-REGISTRY?=ghcr.io/weaveworks-liquidmetal
+REGISTRY?=ghcr.io/cr-images
 IMAGE_NAME?=$(REGISTRY)/capmvm-k8s-os
-CONTAINERD_VERSION?=1.5.9
+CONTAINERD_VERSION?=1.7.5
+KUBERNETES_VERSION=1.27.5
 TAG?=$(shell git rev-parse --short HEAD)
 
-RELEASE_VERSIONS?=1.21.8 1.22.3 1.22.8 1.23.5 # RELEASE follows the kubernetes release
+RELEASE_VERSIONS?=1.27.5 # RELEASE follows the kubernetes release
 
 build: $(addprefix build-,$(RELEASE_VERSIONS))
 build-%:
-	$(DOCKER) build -t $(IMAGE_NAME):$*  \
+	$(DOCKER) build --no-cache -t $(IMAGE_NAME):$*  \
 		--build-arg KUBERNETES_VERSION=$* \
 		--build-arg CONTAINERD_VERSION=$(CONTAINERD_VERSION) \
 		--label "org.opencontainers.image.created"="$(BUILD_DATE)" \

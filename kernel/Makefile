@@ -1,8 +1,8 @@
 .PHONY: all builder build-fc build-ch push-fc push-ch
 
-DOCKER := docker
+DOCKER := podman
 
-REGISTRY?=ghcr.io/weaveworks-liquidmetal
+REGISTRY?=ghcr.io/cr-images
 
 BUILDER_IMAGE_NAME?=$(REGISTRY)/kernel-builder
 
